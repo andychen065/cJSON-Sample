@@ -433,9 +433,98 @@ void parse2(char *out)
      }   
 
 }
+
+char *json_loader(char *path)
+{
+  FILE *f;
+  long len;
+  char *content;
+  f=fopen(path,"rb");
+  fseek(f,0,SEEK_END);
+  len=ftell(f);
+  fseek(f,0,SEEK_SET);
+  content=(char*)malloc(len+1);
+  fread(content,1,len,f);
+  fclose(f);
+  return content;
+}
+void parseArray1()
+{
+	/*
+	{
+		"iplist": [{
+			"ip": "1111",
+			"mask": "1111"
+		}, {
+			"ip": "2222",
+			"mask": "22222"
+		}]
+	}
+	*/
+	char* clientlist_str = "{\"iplist\":[{\"ip\":\"1111\",\"mask\":\"1111\"}, {\"ip\":\"2222\",\"mask\":\"22222\"}]}";
+	cJSON* clientlist = cJSON_Parse(clientlist_str);
+	cJSON *ip_arry     = cJSON_GetObjectItem( clientlist, "iplist");  //clientlist 是使用 cjson对象
+	if( NULL != ip_arry ){
+		cJSON *client_list  = ip_arry->child;
+		if( client_list != NULL ){ 
+			char * ip   = cJSON_GetObjectItem( client_list , "ip")->valuestring ;
+			char * mask = cJSON_GetObjectItem( client_list , "mask")->valuestring ;
+			printf("ip: %s  mask: %s\n",ip,mask);
+			client_list = client_list->next ;
+		}
+	} 
+}
+void parseArray2()
+{
+	/*
+	{
+	"maclist": ["11111", "22222", "3333"]
+	}
+	*/
+	char* clientlist_str = "{\"maclist\":[\"11111\",\"22222\",\"3333\"]}";
+	cJSON* clientlist = cJSON_Parse(clientlist_str);
+	cJSON *MAC_arry     = cJSON_GetObjectItem( clientlist, "Maclist");
+	if( MAC_arry != NULL ){
+		int  array_size   = cJSON_GetArraySize ( MAC_arry );
+
+		for( int iCnt = 0 ; iCnt < array_size ; iCnt ++ ){
+			cJSON * pSub = cJSON_GetArrayItem(MAC_arry, iCnt);
+			if(NULL == pSub ){ continue ; }
+
+			char * ivalue = pSub->valuestring ;
+			printf("Maclist[%d] : %s\n",iCnt,ivalue);
+		}
+	}
+}
+void parseArrayFromFile()
+{
+	/*
+	[{
+		"sponsor": "111111",
+		"name": "11111 name"
+	}, {
+		"sponsor": "22222",
+		"name": "2222 name"
+	}, {
+		"sponsor": "3333",
+		"name": "3333 name"
+	}]
+	*/
+	char *content = json_loader("json_output.txt");
+	cJSON* root = cJSON_Parse(content);
+	
+	int sponsors_array_size = cJSON_GetArraySize(root);
+	for(int i=0; i< sponsors_array_size; i++) 
+	{
+		cJSON * sponsor = cJSON_GetArrayItem(root, i);
+		if(NULL == sponsor ){ continue ; }
+		char * sponsorid   = cJSON_GetObjectItem( sponsor , "sponsor")->valuestring ;
+		char * sponsorname = cJSON_GetObjectItem( sponsor , "name")->valuestring ;
+		printf("Sponsors[%d] : %s %s\n",i,sponsorid, sponsorname);
+	}
+}
 int main(int argc, char* argv[])
 {
-	char* clientlist_str;
 	CParsejson();
 	WriteJson();
 
@@ -452,39 +541,10 @@ int main(int argc, char* argv[])
 	printf("Hello World!\n");
 
 
-	/*
-	{"iplist":[{"ip":"1111","mask":"1111"},{"ip":"2222","mask","22222"}]}
-	*/
-	clientlist_str = "{\"iplist\":[{\"ip\":\"1111\",\"mask\":\"1111\"}, {\"ip\":\"2222\",\"mask\":\"22222\"}]}";
-	cJSON* clientlist = cJSON_Parse(clientlist_str);
-	cJSON *ip_arry     = cJSON_GetObjectItem( clientlist, "iplist");  //clientlist 是使用 cjson对象
-	if( NULL != ip_arry ){
-		cJSON *client_list  = ip_arry->child;
-		if( client_list != NULL ){ 
-			char * ip   = cJSON_GetObjectItem( client_list , "ip")->valuestring ;
-			char * mask = cJSON_GetObjectItem( client_list , "mask")->valuestring ;
-			printf("ip: %s  mask: %s\n",ip,mask);
-			client_list = client_list->next ;
-		}
-	}  
+	parseArray1(); 
 
-	/*
-	{"maclist":["11111","22222","3333"]}
-	*/
-	clientlist_str = "{\"maclist\":[\"11111\",\"22222\",\"3333\"]}";
-	clientlist = cJSON_Parse(clientlist_str);
-	cJSON *MAC_arry     = cJSON_GetObjectItem( clientlist, "Maclist");
-	if( MAC_arry != NULL ){
-		int  array_size   = cJSON_GetArraySize ( MAC_arry );
+	parseArray2();
 
-		for( int iCnt = 0 ; iCnt < array_size ; iCnt ++ ){
-			cJSON * pSub = cJSON_GetArrayItem(MAC_arry, iCnt);
-			if(NULL == pSub ){ continue ; }
-
-			char * ivalue = pSub->valuestring ;
-			printf("Maclist[%d] : %s\n",iCnt,ivalue);
-		}
-	}
+	parseArrayFromFile();
 	return 0;
 }
-
